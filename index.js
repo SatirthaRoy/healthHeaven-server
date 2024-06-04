@@ -32,7 +32,10 @@ async function run() {
   try {
     const database = client.db("HealthHeaven");
     const users = database.collection("users");
+    const shop = database.collection('shop');
+    const categories = database.collection('categories');
 
+    // --------------------------------USER-----------------------------------//
     // add user to users collection
     app.post('/users', async(req, res) => {
       const user = req.body;
@@ -50,6 +53,47 @@ async function run() {
         res.send({isInData: false})
       }
     })
+
+    // get users data 
+    app.get('/users', async(req, res) => {
+      const userId = req.query.id;
+      const result = await users.findOne({uid: userId});
+      res.send(result);
+    })
+
+
+    // ---------------------------------SHOP------------------------------------//
+
+    // add items in shop
+    app.post('/addtoshop', async(req, res) => {
+      const item = req.body;
+      const result = await shop.insertOne(item);
+      res.send(result);
+    })
+
+    // get shop items by seller uid
+    app.get('/shop', async(req, res) => {
+      const id = req.query.id;
+      const result = await shop.find({sellerUid: id}).toArray();
+      res.send(result);
+    })
+
+
+    // -------------------------------CATEGORIES-----------------------------------------//
+    // get categories
+    app.get('/categories' , async(req, res) => {
+      const result = await categories.find().toArray();
+      res.send(result);
+    })
+
+    // get estimated items count of categories
+    app.get('/category/:category', async(req, res) => {
+      const categoryName = req.params.category;
+      const result =  await shop.find({category: categoryName}).toArray();
+      res.send(result);
+    })
+
+
 
 
     // Connect the client to the server	(optional starting in v4.7)
