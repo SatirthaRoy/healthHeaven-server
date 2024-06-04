@@ -34,6 +34,7 @@ async function run() {
     const users = database.collection("users");
     const shop = database.collection('shop');
     const categories = database.collection('categories');
+    const cart = database.collection('cart');
 
     // --------------------------------USER-----------------------------------//
     // add user to users collection
@@ -64,6 +65,7 @@ async function run() {
 
     // ---------------------------------SHOP------------------------------------//
 
+
     // add items in shop
     app.post('/addtoshop', async(req, res) => {
       const item = req.body;
@@ -71,11 +73,15 @@ async function run() {
       res.send(result);
     })
 
-    // get shop items by seller uid
+    // get all shop items or shopitems by seller uid
     app.get('/shop', async(req, res) => {
       const id = req.query.id;
-      const result = await shop.find({sellerUid: id}).toArray();
-      res.send(result);
+      if(id) {
+        const result = await shop.find({sellerUid: id}).toArray();
+        return res.send(result);
+      } 
+      const allShopItems = await shop.find().toArray();
+      return res.send(allShopItems);
     })
 
 
@@ -90,6 +96,28 @@ async function run() {
     app.get('/category/:category', async(req, res) => {
       const categoryName = req.params.category;
       const result =  await shop.find({category: categoryName}).toArray();
+      res.send(result);
+    })
+
+    // ------------------------------------CART---------------------------------------------//
+    // add item to cart
+    app.post('/addcart', async(req, res) => {
+      const itemData = req.body;
+      const findResult = await cart.findOne({$and: [{itemId: itemData.itemId}, {userId: itemData.userId}]});
+      if(findResult) {
+        const query = {$and: [{itemId: itemData.itemId}, {userId: itemData.userId}]};
+        const result = await cart.updateOne(query, {$inc: {quantity: 1}});
+        res.send(result);
+      } else {
+        const result = await cart.insertOne(itemData);
+        res.send(result);   
+      }
+    })
+
+    // get item from cart querying by userId
+    app.get('/getcart/:id', async(req, res) => {
+      const uid = req.params.id;
+      const result = await cart.find({userId: uid}).toArray();
       res.send(result);
     })
 
