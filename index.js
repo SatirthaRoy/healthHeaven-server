@@ -84,6 +84,19 @@ async function run() {
       return res.send(allShopItems);
     })
 
+    // get shop items by category
+    app.get('/shop/category/:category', async(req, res) => {
+      const category = req.params.category;
+      const result = await shop.find({category: category}).toArray();
+      res.send(result);
+    })
+
+    // get shop items that has discounts
+    app.get('/shop/discounts', async(req, res) => {
+      const result = await shop.find({discount: {$ne: 0}}).toArray();
+      res.send(result);
+    })
+
 
     // -------------------------------CATEGORIES-----------------------------------------//
     // get categories
