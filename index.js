@@ -134,7 +134,30 @@ async function run() {
       res.send(result);
     })
 
+    // cart item quantity increase
+    app.patch('/cart/:action', async(req, res) => {
+      const data = req.body;
+      const action = req.params.action;
+      if(action === 'increase') {
+        const query = {$and : [{itemId: data.itemId}, {sellerUid: data.sellerUid}, {userId: data.userId}]}
+        const result = await cart.updateOne(query, {$inc: {quantity: 1}});
+        return res.send(result);
+      } else {
+        const query = {$and : [{itemId: data.itemId}, {sellerUid: data.sellerUid}, {userId: data.userId}]};
+        const result =  await cart.updateOne(query, {$inc: {quantity: -1}});
+        return res.send(result)
+      }
+    })
 
+    // delete item from cart
+    app.delete('/cart/delete', async(req, res) => {
+      const itemId = req.query.itemId;
+      const sellerUid = req.query.sellerUid;
+      const userId = req.query.userId;
+      const query = {$and : [{itemId: itemId}, {sellerUid: sellerUid}, {userId: userId}]};
+      const result = await cart.deleteOne(query);
+      res.send(result);
+    })
 
 
     // Connect the client to the server	(optional starting in v4.7)
