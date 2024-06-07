@@ -3,6 +3,7 @@ const cors = require('cors')
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_KEY)
 
 const app = express();
 const port = process.env.PORT || 5000;
