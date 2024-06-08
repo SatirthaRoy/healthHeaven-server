@@ -36,6 +36,8 @@ async function run() {
     const shop = database.collection('shop');
     const categories = database.collection('categories');
     const cart = database.collection('cart');
+    const sold = database.collection('sold');
+    const payments = database.collection('payments');
 
     // --------------------------------USER-----------------------------------//
     // add user to users collection
@@ -158,6 +160,59 @@ async function run() {
       const query = {$and : [{itemId: itemId}, {sellerUid: sellerUid}, {userId: userId}]};
       const result = await cart.deleteOne(query);
       res.send(result);
+    })
+
+
+    // clear cart using uid
+    app.delete('/cart/:uid', async(req, res) => {
+      const userId = req.params.uid;
+      const result = await cart.deleteMany({userId: userId})
+      res.send(result);
+    })
+
+
+    // ------------------------------------------------SOLD-------------------------------------------------//
+    app.post('/sold', async(req, res) => {
+      const soldData = req.body;
+      const options = { ordered: true };
+      const result = await sold.insertMany(soldData, options);
+      res.send(result);
+    })
+
+    // get sold data by transactionId
+    app.get('/soldData', async(req, res) => {
+      const userId = req.query.uid;
+      const transactionId = req.query.transactionId;
+      const query = {$and: [{userId: userId}, {transactionId: transactionId}]}
+      const result = await sold.find(query).toArray();
+      res.send(result);
+    })
+
+    // send data to payments
+    app.post('/payments', async(req, res) => {
+      const data = req.body;
+      const result = await payments.insertOne(data);
+      res.send(result);
+    })
+
+
+
+
+
+
+    // -------------------------------------PAYMENTS -------------------------------------------------//
+    // payment intent
+    app.post('/create-payment-intent', async(req, res) => {
+      const {price} = req.body;
+      const amount = (Number(price) * 100).toFixed(0);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      })
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
     })
 
 
