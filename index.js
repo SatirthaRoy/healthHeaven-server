@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors')
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_KEY)
@@ -38,6 +38,7 @@ async function run() {
     const cart = database.collection('cart');
     const sold = database.collection('sold');
     const payments = database.collection('payments');
+    const Ads = database.collection('Ads');
 
     // --------------------------------USER-----------------------------------//
     // add user to users collection
@@ -58,13 +59,31 @@ async function run() {
       }
     })
 
-    // get users data 
+    // get users data to get role
     app.get('/users', async(req, res) => {
       const userId = req.query.id;
       const result = await users.findOne({uid: userId});
       res.send(result);
     })
 
+    // get all users data for admin
+    app.get('/allusers', async(req, res) => {
+      const result = await users.find().toArray();
+      res.send(result);
+    })
+
+    // change user role
+    app.patch('/user/:uid', async(req, res) => {
+      const userId = req.params.uid;
+      const query = {uid: userId};
+      const updatedDoc = {
+        $set: {
+          role: req.body.role
+        }
+      }
+      const result = await users.updateOne(query, updatedDoc);
+      res.send(result);
+    })
 
     // ---------------------------------SHOP------------------------------------//
 
@@ -102,6 +121,14 @@ async function run() {
 
 
     // -------------------------------CATEGORIES-----------------------------------------//
+
+    // add category
+    app.post('/addcategory', async(req, res) => {
+      const categoryData = req.body;
+      const result = await categories.insertOne(categoryData);
+      res.send(result);
+    })
+
     // get categories
     app.get('/categories' , async(req, res) => {
       const result = await categories.find().toArray();
@@ -112,6 +139,28 @@ async function run() {
     app.get('/category/:category', async(req, res) => {
       const categoryName = req.params.category;
       const result =  await shop.find({category: categoryName}).toArray();
+      res.send(result);
+    })
+
+    // update a category
+    app.patch('/updatecategory/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const updatedDoc = {
+        $set: {
+          categoryName: req.body.categoryName,
+          categoryImage: req.body.categoryImage
+        }
+      }
+      const result = await categories.updateOne(query, updatedDoc);
+      res.send(result);
+    })
+
+    // delete a category
+    app.delete('/deletecategory/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await categories.deleteOne(query);
       res.send(result);
     })
 
@@ -170,12 +219,70 @@ async function run() {
       res.send(result);
     })
 
+    // ----------------------------------------------------ADVERTISEMENTS--------------------------------------//
+    // add advertisement
+    app.post('/addAd', async(req, res) => {
+      const data = req.body;
+      const result = await Ads.insertOne(data);
+      res.send(result);
+    })
+
+    // get ads
+    app.get('/ads/:id', async(req, res) => {
+      const query = {sellerUid : req.params.id}
+      const result = await Ads.find(query).toArray();
+      return res.send(result);
+    })
+
+    // get all ads
+    app.get('/ads', async(req, res) => {
+      const result = await Ads.find().toArray();
+      return res.send(result);
+    })
+
+    // toggle ad to add
+    app.patch('/adstoggle/:id', async(req, res) => {
+      const query = {_id: new ObjectId(req.params.id)};
+      const findResult = await Ads.findOne(query);
+      let updatedDoc = {};
+      if(findResult.status === 'not added') {
+        updatedDoc = {
+          $set: {
+            status: 'added'
+          }
+        }
+      } else {
+        updatedDoc = {
+          $set: {
+            status: 'not added'
+          }
+        }
+      }
+
+      const result = await Ads.updateOne(query, updatedDoc);
+      res.send(result);
+
+    })
+
+    // get only the added ads
+    app.get('/addedAds', async(req, res) => {
+      const query = {status: 'added'};
+      const result = await Ads.find(query).toArray();
+      res.send(result);
+    })
+
 
     // ------------------------------------------------SOLD-------------------------------------------------//
     app.post('/sold', async(req, res) => {
       const soldData = req.body;
       const options = { ordered: true };
       const result = await sold.insertMany(soldData, options);
+      res.send(result);
+    })
+
+    // get all sold data
+    app.get('/allsold', async(req, res) => {
+      const result = await sold.find().toArray();
       res.send(result);
     })
 
@@ -188,6 +295,15 @@ async function run() {
       res.send(result);
     })
 
+    // get sellers product solds
+    app.get('/sold/:id', async(req,res) => {
+      const id = req.params.id;
+      const query = {sellerUid: id};
+      const result = await sold.find(query).toArray();
+      res.send(result);
+    })
+
+    // ------------------------------------- PAYMENTS HISTORY-------------------------------------//
     // send data to payments
     app.post('/payments', async(req, res) => {
       const data = req.body;
@@ -195,6 +311,34 @@ async function run() {
       res.send(result);
     })
 
+    // get payments data
+    app.get('/getpayments', async(req, res) => {
+      const result = await payments.find().toArray();
+      res.send(result);
+    })
+
+    // get payment data by userId
+    app.get('/getpayments/:id', async(req, res) => {
+      const userId = req.params.id;
+      const result = await payments.find({userId: userId}).toArray();
+      res.send(result);
+    })
+
+    // update payment status
+    app.patch('/payment/:transactionId', async(req, res) => {
+      const transactionId = req.params.transactionId;
+      const query = {transactionId: transactionId};
+      const updatedDoc = {
+        $set: {
+          status: 'paid'
+        }
+      }
+      // patch sold items status
+      const soldResult = await sold.updateMany(query, updatedDoc);
+      // patch payments status
+      const result = await payments.updateOne(query, updatedDoc);
+      res.send(result);
+    })
 
 
 
