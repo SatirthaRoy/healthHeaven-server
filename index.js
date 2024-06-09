@@ -33,6 +33,7 @@ async function run() {
   try {
     const database = client.db("HealthHeaven");
     const users = database.collection("users");
+    const queries = database.collection('queries');
     const shop = database.collection('shop');
     const categories = database.collection('categories');
     const cart = database.collection('cart');
@@ -84,6 +85,48 @@ async function run() {
       const result = await users.updateOne(query, updatedDoc);
       res.send(result);
     })
+
+    // --------------------------------------------QUERIES------------------------------------------//
+    // post a query
+    app.post('/query', async(req,res) => {
+      const data = req.body;
+      const result = await queries.insertOne(data);
+      res.send(result);
+    })
+
+    // get users queries
+    app.get('/query/:id', async(req, res) => {
+      const userId = req.params.id;
+      const result = await queries.find({userId: userId}).toArray();
+      res.send(result);
+    })
+
+    // get queries and specific queries
+    app.get('/queries', async(req,res) => {
+      const result = await queries.find().toArray();
+      res.send(result);
+    })
+
+    // get specific query
+    app.get('/queries/:id', async(req,res) => {
+      const id = req.params.id;
+      const result = await queries.findOne({_id: new ObjectId(id)});
+      res.send(result);
+    })
+
+    // add reply to query
+    app.put('/query/:id/reply', async(req, res) => {
+      const id = req.params.id;
+      const replyData = req.body;
+      const query = {_id: new ObjectId(id)};
+      const updatedDoc= {
+        $push: {replies: replyData}
+      }
+
+      const result = await queries.updateOne(query, updatedDoc);
+      res.send(result);
+    })
+
 
     // ---------------------------------SHOP------------------------------------//
 
