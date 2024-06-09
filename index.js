@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000;
 // used middlewares
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:5173']
+  origin: ['http://localhost:5173', 'https://health-heaven.web.app']
 }));
 
 
